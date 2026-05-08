@@ -28,6 +28,7 @@ io.on('connection', (socket) => {
     // Send initial count of active chatters and lock status
     socket.emit('online-count-update', Object.keys(users).length || 1);
     socket.emit('room-lock-status', isLocked);
+    socket.emit('user-list-update', Object.values(users));
 
     socket.on('new-user-joined', name => {
         if (isLocked) {
@@ -36,8 +37,9 @@ io.on('connection', (socket) => {
         }
         users[socket.id] = name;
         socket.broadcast.emit('user-joined', name);
-        // Broadcast updated count to everyone
+        // Broadcast updated count and list to everyone
         io.emit('online-count-update', Object.keys(users).length);
+        io.emit('user-list-update', Object.values(users));
     });
 
     socket.on('toggle-lock', () => {
@@ -63,7 +65,8 @@ io.on('connection', (socket) => {
             socket.broadcast.emit('user-left', name);
             delete users[socket.id];
         }
-        // Broadcast updated count to everyone
+        // Broadcast updated count and list to everyone
         io.emit('online-count-update', Object.keys(users).length);
+        io.emit('user-list-update', Object.values(users));
     })
 })

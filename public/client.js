@@ -15,6 +15,9 @@ let searchToggle = document.querySelector('#search-toggle')
 let searchBar = document.querySelector('#search-bar')
 let searchInput = document.querySelector('#search-input')
 let lockBtn = document.querySelector('#lock-btn')
+let membersBtn = document.querySelector('#members-btn')
+let userListModal = document.querySelector('#user-list-modal')
+let userList = document.querySelector('#user-list')
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -86,6 +89,18 @@ function updateLockUI(isLocked) {
 
 lockBtn.addEventListener('click', () => {
     socket.emit('toggle-lock')
+})
+
+// --- Members Logic ---
+membersBtn.addEventListener('click', (e) => {
+    e.stopPropagation()
+    userListModal.classList.toggle('hidden')
+})
+
+document.addEventListener('click', (e) => {
+    if (!userListModal.contains(e.target) && e.target !== membersBtn) {
+        userListModal.classList.add('hidden')
+    }
 })
 
 // --- Event Listeners ---
@@ -282,4 +297,13 @@ socket.on('room-lock-status', (isLocked) => updateLockUI(isLocked))
 socket.on('join-error', (error) => {
     alert(error)
     window.location.reload()
+})
+
+socket.on('user-list-update', (users) => {
+    userList.innerHTML = ''
+    users.forEach(u => {
+        let li = document.createElement('li')
+        li.innerHTML = `<div class="status-dot"></div><span>${u}</span>`
+        userList.appendChild(li)
+    })
 })
