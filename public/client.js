@@ -64,8 +64,9 @@ searchInput.addEventListener('input', (e) => {
 })
 
 // --- Event Listeners ---
-textarea.addEventListener('keyup', (e) => {
-    if (e.key === 'Tab' && !e.shiftKey) {
+textarea.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
         sendMessage(e.target.value)
     }
     if (e.key === 'Escape') {
