@@ -57,11 +57,13 @@ section.chat__section {
     background: #FBFBFB;
 }
 .typing-indicator {
-    padding: 5px 20px;
-    font-size: 13px;
-    color: #888;
-    font-style: italic;
-    height: 25px;
+    padding: 2px 20px;
+    font-size: 11px;
+    color: #4CAF50;
+    font-weight: bold;
+    height: 18px;
+    background: #fdfdfd;
+    border-bottom: 1px solid #eee;
 }
 textarea {
     width: 100%;
