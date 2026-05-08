@@ -1,4 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+:root {
+    --bg-body: #F8F8F8;
+    --bg-chat: #fff;
+    --bg-header: #f1f1f1;
+    --bg-input: #FBFBFB;
+    --bg-incoming: #fff;
+    --bg-outgoing: #dcf8c6;
+    --text-primary: #333;
+    --text-secondary: #444;
+    --text-timestamp: #888;
+    --border-color: #eee;
+}
+
+body.dark-mode {
+    --bg-body: #111b21;
+    --bg-chat: #0b141a;
+    --bg-header: #202c33;
+    --bg-input: #2a3942;
+    --bg-incoming: #202c33;
+    --bg-outgoing: #005c4b;
+    --text-primary: #e9edef;
+    --text-secondary: #d1d7db;
+    --text-timestamp: #8696a0;
+    --border-color: #313d45;
+}
+
 * {
     padding: 0;
     margin: 0;
@@ -10,21 +36,42 @@ body {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    background: #F8F8F8;
+    background: var(--bg-body);
     font-family: 'Roboto', sans-serif;
+    transition: background 0.3s, color 0.3s;
 }
 section.chat__section {
     width: 800px;
     max-width: 90%;
-    background: #fff;
+    background: var(--bg-chat);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
 }
 .brand {
     padding: 20px;
-    background: #f1f1f1;
+    background: var(--bg-header);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    color: var(--text-primary);
+}
+.search-bar {
+    padding: 10px 20px;
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s;
+}
+.search-bar input {
+    width: 100%;
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    outline: none;
 }
 .brand__logo {
     display: flex;
@@ -33,7 +80,7 @@ section.chat__section {
 .brand h1 {
     text-transform: uppercase;
     font-size: 20px;
-    color: #444;
+    color: var(--text-primary);
     margin-left: 10px;
 }
 .online-count {
@@ -54,10 +101,40 @@ section.chat__section {
     background-color: #e5ddd5;
     background-image: url("https://www.transparenttextures.com/patterns/cubes.png");
 }
+body.dark-mode .message__area {
+    background-color: #0b141a;
+    background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png");
+}
 .input__area {
     position: relative;
-    background: #FBFBFB;
-    border-top: 1px solid #eee;
+    background: var(--bg-input);
+    border-top: 1px solid var(--border-color);
+}
+.typing-indicator {
+    padding: 2px 20px;
+    font-size: 11px;
+    color: #4CAF50;
+    font-weight: bold;
+    height: 22px;
+    background: var(--bg-chat);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.typing-dots span {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: #4CAF50;
+    border-radius: 50%;
+    animation: typing-anim 1s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing-anim {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
 }
 .input__wrapper {
     display: flex;
@@ -100,6 +177,7 @@ textarea {
     outline: none;
     background: transparent;
     resize: none;
+    color: var(--text-primary);
 }
 
 .message {
@@ -117,15 +195,15 @@ textarea {
     to { opacity: 1; transform: translateY(0); }
 }
 .incoming {
-    background: #fff;
-    color: #333;
+    background: var(--bg-incoming);
+    color: var(--text-primary);
     border-bottom-left-radius: 0;
     align-self: flex-start;
     margin-left: 45px;
 }
 .outgoing {
-    background: #dcf8c6;
-    color: #333;
+    background: var(--bg-outgoing);
+    color: var(--text-primary);
     border-bottom-right-radius: 0;
     align-self: flex-end;
 }
@@ -149,6 +227,9 @@ textarea {
     font-size: 13px;
     color: #075e54;
 }
+body.dark-mode .message h4 {
+    color: #53bdeb;
+}
 .message img {
     max-width: 100%;
     border-radius: 4px;
@@ -159,7 +240,7 @@ textarea {
     font-size: 10px;
     margin-top: 5px;
     text-align: right;
-    color: #888;
+    color: var(--text-timestamp);
 }
 .message__actions {
     display: flex;
@@ -178,8 +259,11 @@ textarea {
     border: none;
     font-size: 12px;
     cursor: pointer;
-    color: #075e54;
+    color: var(--text-timestamp);
     text-decoration: underline;
+}
+.action-btn:hover {
+    color: #4CAF50;
 }
 .reaction-container {
     display: flex;
@@ -187,12 +271,13 @@ textarea {
     margin-top: 5px;
 }
 .reaction {
-    background: white;
-    border: 1px solid #ddd;
+    background: var(--bg-header);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 2px 6px;
     font-size: 12px;
     cursor: pointer;
+    color: var(--text-primary);
 }
 .read-status {
     font-size: 12px;

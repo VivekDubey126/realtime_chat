@@ -10,6 +10,10 @@ let emojiBtn = document.querySelector('#emoji-btn')
 let emojiPicker = document.querySelector('#emoji-picker')
 let clearBtn = document.querySelector('#clear-btn')
 let scrollBottomBtn = document.querySelector('#scroll-bottom-btn')
+let themeToggle = document.querySelector('#theme-toggle')
+let searchToggle = document.querySelector('#search-toggle')
+let searchBar = document.querySelector('#search-bar')
+let searchInput = document.querySelector('#search-input')
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -18,6 +22,38 @@ do {
 } while(!name)
 
 socket.emit('new-user-joined', name)
+
+// --- Dark Mode Logic ---
+if (localStorage.getItem('theme') === 'dark') {
+    document.body.classList.add('dark-mode')
+    themeToggle.innerText = '☀️'
+}
+
+themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode')
+    const isDark = document.body.classList.contains('dark-mode')
+    themeToggle.innerText = isDark ? '☀️' : '🌙'
+    localStorage.setItem('theme', isDark ? 'dark' : 'light')
+})
+
+// --- Search Logic ---
+searchToggle.addEventListener('click', () => {
+    searchBar.classList.toggle('hidden')
+    if (!searchBar.classList.contains('hidden')) searchInput.focus()
+})
+
+searchInput.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase()
+    document.querySelectorAll('.message').forEach(msg => {
+        const text = msg.querySelector('p')?.innerText.toLowerCase() || ''
+        if (text.includes(term)) {
+            msg.style.display = 'flex'
+            msg.style.opacity = '1'
+        } else {
+            msg.style.display = 'none'
+        }
+    })
+})
 
 // --- Event Listeners ---
 
@@ -211,4 +247,14 @@ socket.on('message-reaction', (data) => {
 socket.on('online-count-update', (count) => onlineCount.innerText = `Online: ${count}`)
 socket.on('user-joined', (name) => appendSystemMessage(`${name} joined`))
 socket.on('user-left', (name) => appendSystemMessage(`${name} left`))
-socket.on('typing', (name) => typingIndicator.innerText = name ? `${name} is typing...` : '')
+
+socket.on('typing', (name) => {
+    if (name) {
+        typingIndicator.innerHTML = `
+            ${name} is typing
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+        `
+    } else {
+        typingIndicator.innerHTML = ''
+    }
+})
