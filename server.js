@@ -65,8 +65,28 @@ io.on('connection', (socket) => {
             socket.broadcast.emit('user-left', name);
             delete users[socket.id];
         }
+        // Notify others if user was in a call
+        socket.broadcast.emit('user-left-call', socket.id);
+        
         // Broadcast updated count and list to everyone
         io.emit('online-count-update', Object.keys(users).length);
         io.emit('user-list-update', Object.values(users));
     })
+
+    // --- Video Call Signaling ---
+    socket.on('join-call', () => {
+        socket.broadcast.emit('user-joined-call', socket.id);
+    });
+
+    socket.on('signal', (data) => {
+        // data contains { to: targetSocketId, from: sourceSocketId, signal: webrtcSignalData }
+        io.to(data.to).emit('signal', {
+            from: socket.id,
+            signal: data.signal
+        });
+    });
+
+    socket.on('leave-call', () => {
+        socket.broadcast.emit('user-left-call', socket.id);
+    });
 })

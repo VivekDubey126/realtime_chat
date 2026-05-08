@@ -18,6 +18,16 @@ let lockBtn = document.querySelector('#lock-btn')
 let membersBtn = document.querySelector('#members-btn')
 let userListModal = document.querySelector('#user-list-modal')
 let userList = document.querySelector('#user-list')
+let joinCallBtn = document.querySelector('#join-call-btn')
+let videoCallOverlay = document.querySelector('#video-call-overlay')
+let videoGrid = document.querySelector('#video-grid')
+let muteBtn = document.querySelector('#mute-btn')
+let cameraBtn = document.querySelector('#camera-btn')
+let leaveCallBtn = document.querySelector('#leave-call-btn')
+
+let localStream;
+let peers = {}; // { socketId: RTCPeerConnection }
+const iceServers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -102,6 +112,109 @@ document.addEventListener('click', (e) => {
         userListModal.classList.add('hidden')
     }
 })
+
+// --- Video Call Logic ---
+joinCallBtn.addEventListener('click', async () => {
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        videoCallOverlay.classList.remove('hidden')
+        addVideoStream('local', localStream, true)
+        socket.emit('join-call')
+    } catch (err) {
+        alert('Could not access camera/microphone')
+    }
+})
+
+leaveCallBtn.addEventListener('click', () => {
+    leaveCall()
+})
+
+muteBtn.addEventListener('click', () => {
+    const enabled = localStream.getAudioTracks()[0].enabled
+    localStream.getAudioTracks()[0].enabled = !enabled
+    muteBtn.classList.toggle('off', enabled)
+})
+
+cameraBtn.addEventListener('click', () => {
+    const enabled = localStream.getVideoTracks()[0].enabled
+    localStream.getVideoTracks()[0].enabled = !enabled
+    cameraBtn.classList.toggle('off', enabled)
+})
+
+async function callUser(userId) {
+    const pc = createPeerConnection(userId)
+    const offer = await pc.createOffer()
+    await pc.setLocalDescription(offer)
+    socket.emit('signal', { to: userId, signal: offer })
+}
+
+function createPeerConnection(userId) {
+    const pc = new RTCPeerConnection(iceServers)
+    peers[userId] = pc
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream))
+
+    pc.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.emit('signal', { to: userId, signal: event.candidate })
+        }
+    }
+
+    pc.ontrack = (event) => {
+        addVideoStream(userId, event.streams[0], false)
+    }
+
+    return pc
+}
+
+function addVideoStream(userId, stream, isLocal) {
+    let videoWrap = document.getElementById(`wrap-${userId}`)
+    if (!videoWrap) {
+        videoWrap = document.createElement('div')
+        videoWrap.id = `wrap-${userId}`
+        videoWrap.classList.add('video-wrap')
+        const video = document.createElement('video')
+        video.id = `video-${userId}`
+        video.autoplay = true
+        video.playsInline = true
+        if (isLocal) video.muted = true
+        video.srcObject = stream
+        videoWrap.appendChild(video)
+        
+        // Add name tag
+        const nameTag = document.createElement('div')
+        nameTag.classList.add('name-tag')
+        nameTag.innerText = isLocal ? 'You' : (getNameBySocketId(userId) || 'Peer')
+        videoWrap.appendChild(nameTag)
+        
+        videoGrid.appendChild(videoWrap)
+    }
+}
+
+function leaveCall() {
+    socket.emit('leave-call')
+    videoCallOverlay.classList.add('hidden')
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop())
+    }
+    Object.keys(peers).forEach(userId => {
+        peers[userId].close()
+        removeVideo(userId)
+    })
+    peers = {}
+    videoGrid.innerHTML = ''
+}
+
+function removeVideo(userId) {
+    const wrap = document.getElementById(`wrap-${userId}`)
+    if (wrap) wrap.remove()
+}
+
+function getNameBySocketId(id) {
+    // This is tricky because the client doesn't have the socketId mapping usually.
+    // For now, we'll just use "Peer". In a real app, we'd sync this.
+    return 'User'
+}
 
 // --- Event Listeners ---
 textarea.addEventListener('keydown', (e) => {
@@ -306,4 +419,34 @@ socket.on('user-list-update', (users) => {
         li.innerHTML = `<div class="status-dot"></div><span>${u}</span>`
         userList.appendChild(li)
     })
+})
+
+socket.on('user-joined-call', (userId) => {
+    callUser(userId)
+})
+
+socket.on('user-left-call', (userId) => {
+    if (peers[userId]) {
+        peers[userId].close()
+        delete peers[userId]
+        removeVideo(userId)
+    }
+})
+
+socket.on('signal', async (data) => {
+    const { from, signal } = data
+    let pc = peers[from]
+
+    if (!pc) pc = createPeerConnection(from)
+
+    if (signal.type === 'offer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(signal))
+        const answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        socket.emit('signal', { to: from, signal: answer })
+    } else if (signal.type === 'answer') {
+        await pc.setRemoteDescription(new RTCSessionDescription(signal))
+    } else if (signal.candidate) {
+        await pc.addIceCandidate(new RTCIceCandidate(signal))
+    }
 })

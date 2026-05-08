@@ -416,3 +416,98 @@ textarea {
     color: var(--text-secondary);
     margin: 15px 0;
 }
+/* Video Call Styles */
+.video-call-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    padding: 40px;
+    backdrop-filter: blur(20px);
+}
+
+.video-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    align-items: center;
+    justify-items: center;
+}
+
+.video-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+    aspect-ratio: 16/9;
+    background: #202c33;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.video-wrap video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.name-tag {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    backdrop-filter: blur(5px);
+}
+
+.video-controls {
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 25px;
+}
+
+.control-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+.control-btn.off {
+    background: #ff4757;
+}
+
+.control-btn.hangup {
+    background: #ff4757;
+    width: 70px;
+    height: 70px;
+}
+
+.control-btn.hangup:hover {
+    background: #ff6b81;
+    transform: scale(1.1) rotate(135deg);
+}
