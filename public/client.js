@@ -23,17 +23,30 @@ do {
 
 socket.emit('new-user-joined', name)
 
-// --- Dark Mode Logic ---
-if (localStorage.getItem('theme') === 'dark') {
-    document.body.classList.add('dark-mode')
-    themeToggle.innerText = '☀️'
+// --- Theme Logic ---
+const sunIcon = themeToggle.querySelector('.sun-icon')
+const moonIcon = themeToggle.querySelector('.moon-icon')
+
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-mode')
+        sunIcon.classList.remove('hidden')
+        moonIcon.classList.add('hidden')
+    } else {
+        document.body.classList.remove('dark-mode')
+        sunIcon.classList.add('hidden')
+        moonIcon.classList.remove('hidden')
+    }
 }
 
+const savedTheme = localStorage.getItem('theme') || 'light'
+applyTheme(savedTheme)
+
 themeToggle.addEventListener('click', () => {
-    document.body.classList.toggle('dark-mode')
     const isDark = document.body.classList.contains('dark-mode')
-    themeToggle.innerText = isDark ? '☀️' : '🌙'
-    localStorage.setItem('theme', isDark ? 'dark' : 'light')
+    const newTheme = isDark ? 'light' : 'dark'
+    applyTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
 })
 
 // --- Search Logic ---
@@ -46,17 +59,11 @@ searchInput.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase()
     document.querySelectorAll('.message').forEach(msg => {
         const text = msg.querySelector('p')?.innerText.toLowerCase() || ''
-        if (text.includes(term)) {
-            msg.style.display = 'flex'
-            msg.style.opacity = '1'
-        } else {
-            msg.style.display = 'none'
-        }
+        msg.style.display = text.includes(term) ? 'block' : 'none'
     })
 })
 
 // --- Event Listeners ---
-
 textarea.addEventListener('keyup', (e) => {
     if(e.key === 'Enter' && !e.shiftKey) {
         sendMessage(e.target.value)
@@ -66,9 +73,7 @@ textarea.addEventListener('keyup', (e) => {
 textarea.addEventListener('input', () => {
     socket.emit('typing', name)
     clearTimeout(window.typingTimer)
-    window.typingTimer = setTimeout(() => {
-        socket.emit('typing', null)
-    }, 1000)
+    window.typingTimer = setTimeout(() => socket.emit('typing', null), 1000)
 })
 
 emojiBtn.addEventListener('click', () => emojiPicker.classList.toggle('hidden'))
@@ -93,24 +98,20 @@ fileInput.addEventListener('change', (e) => {
 })
 
 clearBtn.addEventListener('click', () => {
-    if(confirm('Clear chat screen?')) {
+    if(confirm('Clear conversation?')) {
         messageArea.innerHTML = ''
-        appendSystemMessage('Chat screen cleared')
+        appendSystemMessage('Conversation cleared')
     }
 })
 
 messageArea.addEventListener('scroll', () => {
-    if (messageArea.scrollHeight - messageArea.scrollTop > 700) {
-        scrollBottomBtn.classList.remove('hidden')
-    } else {
-        scrollBottomBtn.classList.add('hidden')
-    }
+    const isScrolledUp = messageArea.scrollHeight - messageArea.scrollTop > 800
+    scrollBottomBtn.classList.toggle('hidden', !isScrolledUp)
 })
 
 scrollBottomBtn.addEventListener('click', scrollToBottom)
 
 // --- Functions ---
-
 function sendMessage(message) {
     if (!message.trim()) return
     const msgId = 'msg_' + Date.now()
@@ -136,41 +137,32 @@ function appendMessage(msg, type) {
 
     let avatarHtml = type === 'incoming' ? `<div class="avatar" style="background: ${stringToColor(msg.user)}">${msg.user.charAt(0).toUpperCase()}</div>` : ''
     
-    let contentHtml = ''
-    if (msg.image) {
-        contentHtml = `<img src="${msg.image}" alt="shared pic">`
-    } else {
-        const linkedText = detectLinks(msg.message)
-        contentHtml = `<p>${linkedText}</p>`
-    }
+    let contentHtml = msg.image ? `<img src="${msg.image}" alt="shared content">` : `<p>${detectLinks(msg.message)}</p>`
 
     let actionsHtml = msg.image 
-        ? `<button class="action-btn" onclick="downloadImage('${msg.image}')">Download</button>`
-        : `<button class="action-btn" onclick="copyMessage(this)">Copy</button>`
+        ? `<button class="action-btn" onclick="downloadImage('${msg.image}')" style="background:none; border:none; cursor:pointer; color:inherit; font-size:11px; text-decoration:underline;">Download</button>`
+        : `<button class="action-btn" onclick="copyMessage(this)" style="background:none; border:none; cursor:pointer; color:inherit; font-size:11px; text-decoration:underline;">Copy</button>`
 
-    let ticks = type === 'outgoing' ? '<span class="read-status">✓✓</span>' : ''
+    let ticks = type === 'outgoing' ? '<span class="read-status" style="margin-left:5px; font-size:12px;">✓✓</span>' : ''
 
-    let markup = `
+    mainDiv.innerHTML = `
         ${avatarHtml}
         <h4>${msg.user}</h4>
         ${contentHtml}
         <div class="reaction-container" id="reactions-${msg.id}"></div>
         <div class="message__actions">
-            <button class="action-btn" onclick="reactToMessage('${msg.id}', '❤️')">❤️</button>
-            <button class="action-btn" onclick="reactToMessage('${msg.id}', '👍')">👍</button>
+            <button class="action-btn" onclick="reactToMessage('${msg.id}', '❤️')" style="background:none; border:none; cursor:pointer;">❤️</button>
+            <button class="action-btn" onclick="reactToMessage('${msg.id}', '👍')" style="background:none; border:none; cursor:pointer;">👍</button>
             ${actionsHtml}
             <span class="timestamp">${msg.time}${ticks}</span>
         </div>
     `
-    mainDiv.innerHTML = markup
     messageArea.appendChild(mainDiv)
 }
 
 function detectLinks(text) {
     const urlRegex = /(https?:\/\/[^\s]+)/g
-    return text.replace(urlRegex, (url) => {
-        return `<a href="${url}" target="_blank" style="color: #075e54; text-decoration: underline;">${url}</a>`
-    })
+    return text.replace(urlRegex, (url) => `<a href="${url}" target="_blank" style="color: #00a884; text-decoration: underline;">${url}</a>`)
 }
 
 window.reactToMessage = (msgId, emoji) => {
@@ -200,8 +192,9 @@ function addReactionUI(msgId, emoji) {
 window.copyMessage = (btn) => {
     const text = btn.closest('.message').querySelector('p').innerText
     navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText
         btn.innerText = 'Copied!'
-        setTimeout(() => btn.innerText = 'Copy', 2000)
+        setTimeout(() => btn.innerText = originalText, 2000)
     })
 }
 
@@ -233,17 +226,13 @@ function stringToColor(str) {
 function scrollToBottom() { messageArea.scrollTop = messageArea.scrollHeight }
 
 // --- Socket Handlers ---
-
 socket.on('message', (msg) => {
     appendMessage(msg, 'incoming')
     notifySound.play().catch(() => {})
     scrollToBottom()
 })
 
-socket.on('message-reaction', (data) => {
-    addReactionUI(data.msgId, data.emoji)
-})
-
+socket.on('message-reaction', (data) => addReactionUI(data.msgId, data.emoji))
 socket.on('online-count-update', (count) => onlineCount.innerText = `Online: ${count}`)
 socket.on('user-joined', (name) => appendSystemMessage(`${name} joined`))
 socket.on('user-left', (name) => appendSystemMessage(`${name} left`))
