@@ -11,11 +11,15 @@
 <body>
     <section class="chat__section">
         <div class="brand">
-            <img height="40" src="/wassup.png" alt="">
-            <h1>Wassup</h1>
+            <div class="brand__logo">
+                <img height="40" src="/wassup.png" alt="">
+                <h1>Wassup</h1>
+            </div>
+            <div id="online-count" class="online-count">Online: 0</div>
         </div>
         <div class="message__area"></div>
-        <div>
+        <div class="input__area">
+            <div id="typing-indicator" class="typing-indicator"></div>
             <textarea id="textarea" cols="30" rows="1" placeholder="Write a message..."></textarea>
         </div>
     </section>
