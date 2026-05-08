@@ -4,21 +4,28 @@ let textarea = document.querySelector('#textarea')
 let messageArea = document.querySelector('.message__area')
 let onlineCount = document.querySelector('#online-count')
 let typingIndicator = document.querySelector('#typing-indicator')
+let fileInput = document.querySelector('#file-input')
+let fileBtn = document.querySelector('#file-btn')
+let emojiBtn = document.querySelector('#emoji-btn')
+let emojiPicker = document.querySelector('#emoji-picker')
+
+const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
 do {
     name = prompt('Please enter your name: ')
 } while(!name)
 
-// Tell server we joined
 socket.emit('new-user-joined', name)
 
+// --- Event Listeners ---
+
 textarea.addEventListener('keyup', (e) => {
-    if(e.key === 'Enter') {
+    if(e.key === 'Enter' && !e.shiftKey) {
         sendMessage(e.target.value)
     }
 })
 
-// Typing indicator logic
+// Typing
 let typingTimer;
 textarea.addEventListener('input', () => {
     socket.emit('typing', name)
@@ -28,31 +35,80 @@ textarea.addEventListener('input', () => {
     }, 1000)
 })
 
+// Emojis
+emojiBtn.addEventListener('click', () => {
+    emojiPicker.classList.toggle('hidden')
+})
+
+document.querySelectorAll('.emoji').forEach(el => {
+    el.addEventListener('click', () => {
+        textarea.value += el.innerText
+        emojiPicker.classList.add('hidden')
+        textarea.focus()
+    })
+})
+
+// File Sharing
+fileBtn.addEventListener('click', () => fileInput.click())
+
+fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0]
+    if (file) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            sendImage(event.target.result)
+        }
+        reader.readAsDataURL(file)
+    }
+})
+
+// --- Functions ---
+
 function sendMessage(message) {
     if (!message.trim()) return
     let msg = {
         user: name,
         message: message.trim(),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        time: getTime()
     }
-    // Append 
     appendMessage(msg, 'outgoing')
     textarea.value = ''
     scrollToBottom()
+    socket.emit('message', msg)
+}
 
-    // Send to server 
+function sendImage(base64) {
+    let msg = {
+        user: name,
+        image: base64,
+        time: getTime()
+    }
+    appendMessage(msg, 'outgoing')
+    scrollToBottom()
     socket.emit('message', msg)
 }
 
 function appendMessage(msg, type) {
     let mainDiv = document.createElement('div')
-    let className = type
-    mainDiv.classList.add(className, 'message')
+    mainDiv.classList.add(type, 'message')
+
+    // Avatar for incoming
+    let avatarHtml = ''
+    if (type === 'incoming') {
+        const color = stringToColor(msg.user)
+        const initials = msg.user.charAt(0).toUpperCase()
+        avatarHtml = `<div class="avatar" style="background: ${color}">${initials}</div>`
+    }
+
+    let contentHtml = msg.image 
+        ? `<img src="${msg.image}" alt="shared pic">` 
+        : `<p>${msg.message}</p>`
 
     let markup = `
+        ${avatarHtml}
         <h4>${msg.user}</h4>
-        <p>${msg.message}</p>
-        <span class="timestamp">${msg.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        ${contentHtml}
+        <span class="timestamp">${msg.time}</span>
     `
     mainDiv.innerHTML = markup
     messageArea.appendChild(mainDiv)
@@ -66,18 +122,39 @@ function appendSystemMessage(message) {
     scrollToBottom()
 }
 
-// Receive messages 
+function getTime() {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function stringToColor(str) {
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    let color = '#'
+    for (let i = 0; i < 3; i++) {
+        let value = (hash >> (i * 8)) & 0xFF
+        color += ('00' + value.toString(16)).substr(-2)
+    }
+    return color
+}
+
+function scrollToBottom() {
+    messageArea.scrollTop = messageArea.scrollHeight
+}
+
+// --- Socket Handlers ---
+
 socket.on('message', (msg) => {
     appendMessage(msg, 'incoming')
+    notifySound.play().catch(() => {}) // Catch browser block
     scrollToBottom()
 })
 
-// Receive online count updates
 socket.on('online-count-update', (count) => {
     onlineCount.innerText = `Online: ${count}`
 })
 
-// Receive user join/leave notifications
 socket.on('user-joined', (userName) => {
     appendSystemMessage(`${userName} joined the chat`)
 })
@@ -86,7 +163,6 @@ socket.on('user-left', (userName) => {
     appendSystemMessage(`${userName} left the chat`)
 })
 
-// Receive typing status
 socket.on('typing', (userName) => {
     if (userName) {
         typingIndicator.innerText = `${userName} is typing...`
@@ -94,7 +170,3 @@ socket.on('typing', (userName) => {
         typingIndicator.innerText = ''
     }
 })
-
-function scrollToBottom() {
-    messageArea.scrollTop = messageArea.scrollHeight
-}

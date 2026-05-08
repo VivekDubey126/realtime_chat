@@ -20,7 +20,15 @@
         <div id="typing-indicator" class="typing-indicator"></div>
         <div class="message__area"></div>
         <div class="input__area">
-            <textarea id="textarea" cols="30" rows="1" placeholder="Write a message..."></textarea>
+            <div class="input__wrapper">
+                <button id="emoji-btn" title="Send Emoji">😊</button>
+                <button id="file-btn" title="Send Image">➕</button>
+                <input type="file" id="file-input" accept="image/*" style="display: none;">
+                <textarea id="textarea" cols="30" rows="1" placeholder="Write a message..."></textarea>
+            </div>
+            <div id="emoji-picker" class="emoji-picker hidden">
+                <span class="emoji">😀</span><span class="emoji">😂</span><span class="emoji">😍</span><span class="emoji">🔥</span><span class="emoji">🙌</span><span class="emoji">🎉</span><span class="emoji">👍</span><span class="emoji">❤️</span><span class="emoji">✨</span><span class="emoji">🚀</span>
+            </div>
         </div>
     </section>
     <script src="/socket.io/socket.io.js"></script>
