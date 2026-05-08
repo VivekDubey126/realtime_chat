@@ -36,6 +36,10 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('message', msg)
     })
 
+    socket.on('message-reaction', (data) => {
+        socket.broadcast.emit('message-reaction', data)
+    })
+
     socket.on('typing', (name) => {
         socket.broadcast.emit('typing', name)
     })

@@ -9,6 +9,7 @@ let fileBtn = document.querySelector('#file-btn')
 let emojiBtn = document.querySelector('#emoji-btn')
 let emojiPicker = document.querySelector('#emoji-picker')
 let clearBtn = document.querySelector('#clear-btn')
+let scrollBottomBtn = document.querySelector('#scroll-bottom-btn')
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -26,20 +27,15 @@ textarea.addEventListener('keyup', (e) => {
     }
 })
 
-// Typing
-let typingTimer;
 textarea.addEventListener('input', () => {
     socket.emit('typing', name)
-    clearTimeout(typingTimer)
-    typingTimer = setTimeout(() => {
+    clearTimeout(window.typingTimer)
+    window.typingTimer = setTimeout(() => {
         socket.emit('typing', null)
     }, 1000)
 })
 
-// Emojis
-emojiBtn.addEventListener('click', () => {
-    emojiPicker.classList.toggle('hidden')
-})
+emojiBtn.addEventListener('click', () => emojiPicker.classList.toggle('hidden'))
 
 document.querySelectorAll('.emoji').forEach(el => {
     el.addEventListener('click', () => {
@@ -49,37 +45,40 @@ document.querySelectorAll('.emoji').forEach(el => {
     })
 })
 
-// File Sharing
 fileBtn.addEventListener('click', () => fileInput.click())
 
 fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0]
     if (file) {
         const reader = new FileReader()
-        reader.onload = (event) => {
-            sendImage(event.target.result)
-        }
+        reader.onload = (event) => sendImage(event.target.result)
         reader.readAsDataURL(file)
     }
 })
 
-// Clear Chat
 clearBtn.addEventListener('click', () => {
-    if(confirm('Are you sure you want to clear your chat screen?')) {
+    if(confirm('Clear chat screen?')) {
         messageArea.innerHTML = ''
         appendSystemMessage('Chat screen cleared')
     }
 })
 
+messageArea.addEventListener('scroll', () => {
+    if (messageArea.scrollHeight - messageArea.scrollTop > 700) {
+        scrollBottomBtn.classList.remove('hidden')
+    } else {
+        scrollBottomBtn.classList.add('hidden')
+    }
+})
+
+scrollBottomBtn.addEventListener('click', scrollToBottom)
+
 // --- Functions ---
 
 function sendMessage(message) {
     if (!message.trim()) return
-    let msg = {
-        user: name,
-        message: message.trim(),
-        time: getTime()
-    }
+    const msgId = 'msg_' + Date.now()
+    let msg = { id: msgId, user: name, message: message.trim(), time: getTime() }
     appendMessage(msg, 'outgoing')
     textarea.value = ''
     scrollToBottom()
@@ -87,11 +86,8 @@ function sendMessage(message) {
 }
 
 function sendImage(base64) {
-    let msg = {
-        user: name,
-        image: base64,
-        time: getTime()
-    }
+    const msgId = 'img_' + Date.now()
+    let msg = { id: msgId, user: name, image: base64, time: getTime() }
     appendMessage(msg, 'outgoing')
     scrollToBottom()
     socket.emit('message', msg)
@@ -100,37 +96,84 @@ function sendImage(base64) {
 function appendMessage(msg, type) {
     let mainDiv = document.createElement('div')
     mainDiv.classList.add(type, 'message')
+    mainDiv.setAttribute('data-id', msg.id)
 
-    // Avatar for incoming
-    let avatarHtml = ''
-    if (type === 'incoming') {
-        const color = stringToColor(msg.user)
-        const initials = msg.user.charAt(0).toUpperCase()
-        avatarHtml = `<div class="avatar" style="background: ${color}">${initials}</div>`
-    }
-
+    let avatarHtml = type === 'incoming' ? `<div class="avatar" style="background: ${stringToColor(msg.user)}">${msg.user.charAt(0).toUpperCase()}</div>` : ''
+    
     let contentHtml = ''
-    let actionsHtml = ''
-
     if (msg.image) {
         contentHtml = `<img src="${msg.image}" alt="shared pic">`
-        actionsHtml = `<button class="action-btn" onclick="downloadImage('${msg.image}')">Download</button>`
     } else {
-        contentHtml = `<p>${msg.message}</p>`
-        actionsHtml = `<button class="action-btn" onclick="copyMessage(this)">Copy</button>`
+        const linkedText = detectLinks(msg.message)
+        contentHtml = `<p>${linkedText}</p>`
     }
+
+    let actionsHtml = msg.image 
+        ? `<button class="action-btn" onclick="downloadImage('${msg.image}')">Download</button>`
+        : `<button class="action-btn" onclick="copyMessage(this)">Copy</button>`
+
+    let ticks = type === 'outgoing' ? '<span class="read-status">✓✓</span>' : ''
 
     let markup = `
         ${avatarHtml}
         <h4>${msg.user}</h4>
         ${contentHtml}
+        <div class="reaction-container" id="reactions-${msg.id}"></div>
         <div class="message__actions">
+            <button class="action-btn" onclick="reactToMessage('${msg.id}', '❤️')">❤️</button>
+            <button class="action-btn" onclick="reactToMessage('${msg.id}', '👍')">👍</button>
             ${actionsHtml}
-            <span class="timestamp">${msg.time}</span>
+            <span class="timestamp">${msg.time}${ticks}</span>
         </div>
     `
     mainDiv.innerHTML = markup
     messageArea.appendChild(mainDiv)
+}
+
+function detectLinks(text) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g
+    return text.replace(urlRegex, (url) => {
+        return `<a href="${url}" target="_blank" style="color: #075e54; text-decoration: underline;">${url}</a>`
+    })
+}
+
+window.reactToMessage = (msgId, emoji) => {
+    addReactionUI(msgId, emoji)
+    socket.emit('message-reaction', { msgId, emoji })
+}
+
+function addReactionUI(msgId, emoji) {
+    const container = document.getElementById(`reactions-${msgId}`)
+    if (container) {
+        let reactionEl = container.querySelector(`[data-emoji="${emoji}"]`)
+        if (reactionEl) {
+            let count = parseInt(reactionEl.getAttribute('data-count')) + 1
+            reactionEl.setAttribute('data-count', count)
+            reactionEl.innerText = `${emoji} ${count}`
+        } else {
+            let el = document.createElement('span')
+            el.classList.add('reaction')
+            el.setAttribute('data-emoji', emoji)
+            el.setAttribute('data-count', 1)
+            el.innerText = `${emoji} 1`
+            container.appendChild(el)
+        }
+    }
+}
+
+window.copyMessage = (btn) => {
+    const text = btn.closest('.message').querySelector('p').innerText
+    navigator.clipboard.writeText(text).then(() => {
+        btn.innerText = 'Copied!'
+        setTimeout(() => btn.innerText = 'Copy', 2000)
+    })
+}
+
+window.downloadImage = (base64) => {
+    const link = document.createElement('a')
+    link.href = base64
+    link.download = `wassup_${Date.now()}.png`
+    link.click()
 }
 
 function appendSystemMessage(message) {
@@ -141,43 +184,17 @@ function appendSystemMessage(message) {
     scrollToBottom()
 }
 
-// Global functions for buttons
-window.copyMessage = (btn) => {
-    const text = btn.closest('.message').querySelector('p').innerText
-    navigator.clipboard.writeText(text).then(() => {
-        const originalText = btn.innerText
-        btn.innerText = 'Copied!'
-        setTimeout(() => btn.innerText = originalText, 2000)
-    })
-}
-
-window.downloadImage = (base64) => {
-    const link = document.createElement('a')
-    link.href = base64
-    link.download = `wassup_image_${Date.now()}.png`
-    link.click()
-}
-
-function getTime() {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
+function getTime() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
 
 function stringToColor(str) {
     let hash = 0
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash)
-    }
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash)
     let color = '#'
-    for (let i = 0; i < 3; i++) {
-        let value = (hash >> (i * 8)) & 0xFF
-        color += ('00' + value.toString(16)).substr(-2)
-    }
+    for (let i = 0; i < 3; i++) color += ('00' + ((hash >> (i * 8)) & 0xFF).toString(16)).substr(-2)
     return color
 }
 
-function scrollToBottom() {
-    messageArea.scrollTop = messageArea.scrollHeight
-}
+function scrollToBottom() { messageArea.scrollTop = messageArea.scrollHeight }
 
 // --- Socket Handlers ---
 
@@ -187,22 +204,11 @@ socket.on('message', (msg) => {
     scrollToBottom()
 })
 
-socket.on('online-count-update', (count) => {
-    onlineCount.innerText = `Online: ${count}`
+socket.on('message-reaction', (data) => {
+    addReactionUI(data.msgId, data.emoji)
 })
 
-socket.on('user-joined', (userName) => {
-    appendSystemMessage(`${userName} joined the chat`)
-})
-
-socket.on('user-left', (userName) => {
-    appendSystemMessage(`${userName} left the chat`)
-})
-
-socket.on('typing', (userName) => {
-    if (userName) {
-        typingIndicator.innerText = `${userName} is typing...`
-    } else {
-        typingIndicator.innerText = ''
-    }
-})
+socket.on('online-count-update', (count) => onlineCount.innerText = `Online: ${count}`)
+socket.on('user-joined', (name) => appendSystemMessage(`${name} joined`))
+socket.on('user-left', (name) => appendSystemMessage(`${name} left`))
+socket.on('typing', (name) => typingIndicator.innerText = name ? `${name} is typing...` : '')
