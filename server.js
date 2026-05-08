@@ -24,12 +24,14 @@ const users = {};
 io.on('connection', (socket) => {
     console.log('Connected...')
     
-    // Send current count to the newly connected user
-    io.emit('online-count-update', io.engine.clientsCount);
+    // Send initial count of active chatters
+    socket.emit('online-count-update', Object.keys(users).length || 1);
 
     socket.on('new-user-joined', name => {
         users[socket.id] = name;
         socket.broadcast.emit('user-joined', name);
+        // Broadcast updated count to everyone
+        io.emit('online-count-update', Object.keys(users).length);
     });
 
     socket.on('message', (msg) => {
@@ -50,7 +52,7 @@ io.on('connection', (socket) => {
             socket.broadcast.emit('user-left', name);
             delete users[socket.id];
         }
-        // Update count for everyone on disconnect
-        io.emit('online-count-update', io.engine.clientsCount);
+        // Broadcast updated count to everyone
+        io.emit('online-count-update', Object.keys(users).length);
     })
 })
