@@ -19,7 +19,7 @@ const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/
 
 do {
     name = prompt('Please enter your name: ')
-} while(!name)
+} while (!name)
 
 socket.emit('new-user-joined', name)
 
@@ -65,8 +65,12 @@ searchInput.addEventListener('input', (e) => {
 
 // --- Event Listeners ---
 textarea.addEventListener('keyup', (e) => {
-    if(e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
         sendMessage(e.target.value)
+    }
+    if (e.key === 'Escape') {
+        emojiPicker.classList.add('hidden')
+        searchBar.classList.add('hidden')
     }
 })
 
@@ -98,7 +102,7 @@ fileInput.addEventListener('change', (e) => {
 })
 
 clearBtn.addEventListener('click', () => {
-    if(confirm('Clear conversation?')) {
+    if (confirm('Clear conversation?')) {
         messageArea.innerHTML = ''
         appendSystemMessage('Conversation cleared')
     }
@@ -136,10 +140,10 @@ function appendMessage(msg, type) {
     mainDiv.setAttribute('data-id', msg.id)
 
     let avatarHtml = type === 'incoming' ? `<div class="avatar" style="background: ${stringToColor(msg.user)}">${msg.user.charAt(0).toUpperCase()}</div>` : ''
-    
+
     let contentHtml = msg.image ? `<img src="${msg.image}" alt="shared content">` : `<p>${detectLinks(msg.message)}</p>`
 
-    let actionsHtml = msg.image 
+    let actionsHtml = msg.image
         ? `<button class="action-btn" onclick="downloadImage('${msg.image}')" style="background:none; border:none; cursor:pointer; color:inherit; font-size:11px; text-decoration:underline;">Download</button>`
         : `<button class="action-btn" onclick="copyMessage(this)" style="background:none; border:none; cursor:pointer; color:inherit; font-size:11px; text-decoration:underline;">Copy</button>`
 
@@ -228,7 +232,7 @@ function scrollToBottom() { messageArea.scrollTop = messageArea.scrollHeight }
 // --- Socket Handlers ---
 socket.on('message', (msg) => {
     appendMessage(msg, 'incoming')
-    notifySound.play().catch(() => {})
+    notifySound.play().catch(() => { })
     scrollToBottom()
 })
 
