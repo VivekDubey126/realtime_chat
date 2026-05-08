@@ -20,18 +20,29 @@ const io = require('socket.io')(http, {
 })
 
 const users = {};
+let isLocked = false;
 
 io.on('connection', (socket) => {
     console.log('Connected...')
     
-    // Send initial count of active chatters
+    // Send initial count of active chatters and lock status
     socket.emit('online-count-update', Object.keys(users).length || 1);
+    socket.emit('room-lock-status', isLocked);
 
     socket.on('new-user-joined', name => {
+        if (isLocked) {
+            socket.emit('join-error', 'Room is locked. No new participants can join.');
+            return;
+        }
         users[socket.id] = name;
         socket.broadcast.emit('user-joined', name);
         // Broadcast updated count to everyone
         io.emit('online-count-update', Object.keys(users).length);
+    });
+
+    socket.on('toggle-lock', () => {
+        isLocked = !isLocked;
+        io.emit('room-lock-status', isLocked);
     });
 
     socket.on('message', (msg) => {

@@ -114,6 +114,15 @@ section.chat__section {
     transform: scale(1.1);
 }
 
+#lock-btn.locked {
+    color: #ff4757;
+    background: rgba(255, 71, 87, 0.1);
+}
+
+#lock-btn.locked:hover {
+    background: rgba(255, 71, 87, 0.2);
+}
+
 .search-bar {
     padding: 15px 30px;
     background: var(--bg-header);

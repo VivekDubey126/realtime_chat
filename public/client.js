@@ -14,6 +14,7 @@ let themeToggle = document.querySelector('#theme-toggle')
 let searchToggle = document.querySelector('#search-toggle')
 let searchBar = document.querySelector('#search-bar')
 let searchInput = document.querySelector('#search-input')
+let lockBtn = document.querySelector('#lock-btn')
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -61,6 +62,30 @@ searchInput.addEventListener('input', (e) => {
         const text = msg.querySelector('p')?.innerText.toLowerCase() || ''
         msg.style.display = text.includes(term) ? 'block' : 'none'
     })
+})
+
+// --- Lock Logic ---
+const unlockIcon = lockBtn.querySelector('.unlock-icon')
+const lockIcon = lockBtn.querySelector('.lock-icon')
+
+function updateLockUI(isLocked) {
+    if (isLocked) {
+        lockBtn.classList.add('locked')
+        lockBtn.title = 'Unlock Room'
+        unlockIcon.classList.add('hidden')
+        lockIcon.classList.remove('hidden')
+        appendSystemMessage('Room has been locked')
+    } else {
+        lockBtn.classList.remove('locked')
+        lockBtn.title = 'Lock Room'
+        unlockIcon.classList.remove('hidden')
+        lockIcon.classList.add('hidden')
+        appendSystemMessage('Room has been unlocked')
+    }
+}
+
+lockBtn.addEventListener('click', () => {
+    socket.emit('toggle-lock')
 })
 
 // --- Event Listeners ---
@@ -251,4 +276,10 @@ socket.on('typing', (name) => {
     } else {
         typingIndicator.innerHTML = ''
     }
+})
+
+socket.on('room-lock-status', (isLocked) => updateLockUI(isLocked))
+socket.on('join-error', (error) => {
+    alert(error)
+    window.location.reload()
 })
