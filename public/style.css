@@ -161,6 +161,28 @@ textarea {
     text-align: right;
     color: #888;
 }
+.message__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.message:hover .message__actions {
+    opacity: 1;
+}
+.action-btn {
+    background: none;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    color: #075e54;
+    text-decoration: underline;
+}
+.action-btn:hover {
+    color: #4CAF50;
+}
 .system-message {
     text-align: center;
     font-size: 13px;

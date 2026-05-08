@@ -8,6 +8,7 @@ let fileInput = document.querySelector('#file-input')
 let fileBtn = document.querySelector('#file-btn')
 let emojiBtn = document.querySelector('#emoji-btn')
 let emojiPicker = document.querySelector('#emoji-picker')
+let clearBtn = document.querySelector('#clear-btn')
 
 const notifySound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
 
@@ -62,6 +63,14 @@ fileInput.addEventListener('change', (e) => {
     }
 })
 
+// Clear Chat
+clearBtn.addEventListener('click', () => {
+    if(confirm('Are you sure you want to clear your chat screen?')) {
+        messageArea.innerHTML = ''
+        appendSystemMessage('Chat screen cleared')
+    }
+})
+
 // --- Functions ---
 
 function sendMessage(message) {
@@ -100,15 +109,25 @@ function appendMessage(msg, type) {
         avatarHtml = `<div class="avatar" style="background: ${color}">${initials}</div>`
     }
 
-    let contentHtml = msg.image 
-        ? `<img src="${msg.image}" alt="shared pic">` 
-        : `<p>${msg.message}</p>`
+    let contentHtml = ''
+    let actionsHtml = ''
+
+    if (msg.image) {
+        contentHtml = `<img src="${msg.image}" alt="shared pic">`
+        actionsHtml = `<button class="action-btn" onclick="downloadImage('${msg.image}')">Download</button>`
+    } else {
+        contentHtml = `<p>${msg.message}</p>`
+        actionsHtml = `<button class="action-btn" onclick="copyMessage(this)">Copy</button>`
+    }
 
     let markup = `
         ${avatarHtml}
         <h4>${msg.user}</h4>
         ${contentHtml}
-        <span class="timestamp">${msg.time}</span>
+        <div class="message__actions">
+            ${actionsHtml}
+            <span class="timestamp">${msg.time}</span>
+        </div>
     `
     mainDiv.innerHTML = markup
     messageArea.appendChild(mainDiv)
@@ -120,6 +139,23 @@ function appendSystemMessage(message) {
     div.innerText = message
     messageArea.appendChild(div)
     scrollToBottom()
+}
+
+// Global functions for buttons
+window.copyMessage = (btn) => {
+    const text = btn.closest('.message').querySelector('p').innerText
+    navigator.clipboard.writeText(text).then(() => {
+        const originalText = btn.innerText
+        btn.innerText = 'Copied!'
+        setTimeout(() => btn.innerText = originalText, 2000)
+    })
+}
+
+window.downloadImage = (base64) => {
+    const link = document.createElement('a')
+    link.href = base64
+    link.download = `wassup_image_${Date.now()}.png`
+    link.click()
 }
 
 function getTime() {
@@ -147,7 +183,7 @@ function scrollToBottom() {
 
 socket.on('message', (msg) => {
     appendMessage(msg, 'incoming')
-    notifySound.play().catch(() => {}) // Catch browser block
+    notifySound.play().catch(() => {})
     scrollToBottom()
 })
 
